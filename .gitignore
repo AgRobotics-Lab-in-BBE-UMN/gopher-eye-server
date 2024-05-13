@@ -1,0 +1,7 @@
+plants
+images
+test-images
+test-plants
+.vscode
+.pytest_cache
+__pycache__
