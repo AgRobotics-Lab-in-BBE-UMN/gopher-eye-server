@@ -1,5 +1,7 @@
 jobs
 images
+test-images
+test-jobs
 .vscode
 .pytest_cache
 __pycache__
