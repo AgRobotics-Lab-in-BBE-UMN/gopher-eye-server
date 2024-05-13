@@ -1,70 +1,76 @@
 import os
+import shutil
 import uuid
 from application_interface import ApplicationInterface
 
 class Application(ApplicationInterface):
-    def __init__(self, image_folder="images", jobs="jobs"):
+    def __init__(self, image_folder="images", plants="plants"):
         self.image_folder = image_folder
         os.makedirs(self.image_folder, exist_ok=True)
 
-        self._jobs = {}
-        os.makedirs(jobs, exist_ok=True)
+        self._plants = {}
+        os.makedirs(plants, exist_ok=True)
 
-        self.jobs_file = os.path.join(jobs, "jobs.csv")
-        if os.path.exists(self.jobs_file):
-            with open(self.jobs_file, 'r') as fs:
+        self.plants_file = os.path.join(plants, "plants.csv")
+        if os.path.exists(self.plants_file):
+            with open(self.plants_file, 'r') as fs:
                 line = fs.readline()
                 while line:
                     info = line.replace(" ", "").split(",")
-                    self._jobs[info[0]] = {
-                        "job_id": info[0],
+                    self._plants[info[0]] = {
+                        "plant_id": info[0],
                         "status": info[1],
-                        "image": info[2]
+                        "image": info[2],
+                        "segmentation": info[3]
                     }
                     line = fs.readline()
         else:
-            with open(self.jobs_file, 'w') as fs:
+            with open(self.plants_file, 'w') as fs:
                 pass
 
-    def submit_job(self, file):
+    def segment_plant(self, file):
         guid = str(uuid.uuid4())
         # TODO: Check if the image is valid
         with open(os.path.join(self.image_folder, f'{guid}.jpeg'), 'wb') as fs:
             fs.write(file)
 
-        self._jobs[guid] = {
-            "job_id": guid,
-            "status": "submitted",
-            "image": f"{guid}.jpeg"
+        # TODO: Replacce with segementation model call
+        shutil.copyfile('0025_segmentation.png', os.path.join(self.image_folder, f'{guid}_segmentation.png'))
+        self._plants[guid] = {
+            "plant_id": guid,
+            "status": "complete",
+            "image": f"{guid}.jpeg",
+            "segmentation": f"{guid}_segmentation.png"
         }
-        self.record_job(guid)
+        self.record_plant(guid, self._plants[guid]["status"])
 
         return guid
     
-    def record_job(self, job_id):
-        with open(self.jobs_file, 'a') as fs:
-            fs.write(f"{job_id},submitted,{job_id}.jpeg\n")
+    def record_plant(self, plant_id, status):
+        with open(self.plants_file, 'a') as fs:
+            fs.write(f"{plant_id},status,{plant_id}.jpeg,{plant_id}.png\n")
     
-    def job_status(self, job_id):
-        if job_id in self._jobs:
-            return self._jobs[job_id]["status"]
-        return "job not found"
+    def plant_status(self, plant_id):
+        if plant_id in self._plants:
+            return self._plants[plant_id]["status"]
+        return "plant not found"
     
-    def job_data(self, job_id):
+    def plant_data(self, plant_id):
         response = {"id": "", "status": "", "image": ""}
-        if job_id in self._jobs:
-            job = self._jobs[job_id]
-            response["id"] = job_id
-            response["status"] = job["status"]
-            response["image"] = job["image"]
+        if plant_id in self._plants:
+            plant = self._plants[plant_id]
+            response["id"] = plant_id
+            response["status"] = plant["status"]
+            response["image"] = plant["image"]
+            response["segmentation"] = plant["segmentation"]
 
         return response
     
-    def get_image(self, job_id, image_name):
-        image_file_path = os.path.join(self.image_folder, self._jobs[job_id][image_name])
-        
-        if os.path.exists(image_file_path):
-            return open(image_file_path, 'rb')
-        else:
-            return None
+    def get_image(self, plant_id, image_name):
+        # TODO: This needs a custom error message
+        try:
+            image_file_path = os.path.join(self.image_folder, self._plants[plant_id][image_name])
+            return open(image_file_path, 'rb'), "image/png" if ("png" in image_file_path) else "image/jpeg"
+        except:
+            return None, None
         

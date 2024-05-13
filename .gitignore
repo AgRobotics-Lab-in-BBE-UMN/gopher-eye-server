@@ -1,7 +1,7 @@
-jobs
+plants
 images
 test-images
-test-jobs
+test-plants
 .vscode
 .pytest_cache
 __pycache__
