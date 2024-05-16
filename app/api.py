@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify, send_file, abort
 
 def create_api(name, application_layer=None):
     server = Flask(name)
+
+    @server.route('/', methods=['GET'])
+    def index():
+        return "Gopher Eye API v1.0.0"
     
     @server.route('/dl/segmentation', methods=['PUT'])
     def segment_plant():
