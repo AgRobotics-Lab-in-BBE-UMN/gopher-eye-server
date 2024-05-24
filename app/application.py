@@ -2,6 +2,7 @@ import os
 import shutil
 import uuid
 from application_interface import ApplicationInterface
+from ultralytics import YOLO
 
 class Application(ApplicationInterface):
     def __init__(self, image_folder="images", plants="plants"):
@@ -28,19 +29,20 @@ class Application(ApplicationInterface):
             with open(self.plants_file, 'w') as fs:
                 pass
 
+        self.segmentation = YOLO("spike1n-seg.pt")
+
     def segment_plant(self, file):
         guid = str(uuid.uuid4())
         # TODO: Check if the image is valid
         with open(os.path.join(self.image_folder, f'{guid}.jpeg'), 'wb') as fs:
             fs.write(file)
 
-        # TODO: Replacce with segementation model call
-        shutil.copyfile('0025_segmentation.png', os.path.join(self.image_folder, f'{guid}_segmentation.png'))
+        self.segmentation(os.path.join(self.image_folder, f'{guid}.jpeg'))[0].save(os.path.join(self.image_folder, f'{guid}_segmentation.jpeg'))
         self._plants[guid] = {
             "plant_id": guid,
             "status": "complete",
             "image": f"{guid}.jpeg",
-            "segmentation": f"{guid}_segmentation.png"
+            "segmentation": f"{guid}_segmentation.jpeg"
         }
         self.record_plant(guid, self._plants[guid]["status"])
 

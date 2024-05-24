@@ -12,6 +12,18 @@ def create_api(name, application_layer=None):
             abort(400)
         else:
             return jsonify({"plant_id": application_layer.segment_plant(request.files['image'].read())})
+    
+    @server.route('/perf/segmentation', methods=['PUT'])
+    def perf_test_segementation():
+        if request.mimetype != 'multipart/form-data':
+            print(f"{request.content_type} is not 'multipart/form-data'")
+            abort(400)
+        elif 'image' not in request.files:
+            abort(400)
+        else:
+            plant_id = application_layer.segment_plant(request.files['image'].read())
+            (image_data, mimetype) = application_layer.get_image(plant_id, 'segmentation')
+            return send_file(image_data, mimetype=mimetype)
         
     @server.route('/plant/status', methods=['GET'])
     def get_plant_status():
@@ -34,7 +46,3 @@ def create_api(name, application_layer=None):
             abort(400)
 
     return server
-
-if __name__ == '__main__':
-    app = create_api(__name__)
-    app.run(host="10.0.1.20", port=5000)
