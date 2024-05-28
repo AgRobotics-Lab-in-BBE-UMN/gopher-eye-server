@@ -114,18 +114,18 @@ def test_plant_status_valid(client):
     # Given
     plant_id = 'test_guid'
     header = {'content-type': 'application/json'}
-    json = {'plant_id': plant_id}
+    query_string = {'plant_id': plant_id}
 
     mock_application_layer.clear_plants()
     mock_application_layer.create_plant(plant_id, status="test_status")
     
     # When
-    response = client.get("/plant/status", headers=header, json=json)
+    response = client.get("/plant/status", headers=header, query_string=query_string)
     
     # Then
     assert response.json["status"] == "test_status"
 
-def test_plant_statu_bad(client):
+def test_plant_status_bad(client):
     # Given
     header = {'content-type': 'application/json'}
     json = {'plant_id': 'not real id'}

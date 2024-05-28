@@ -15,7 +15,7 @@ def create_api(name, application_layer=None):
         
     @server.route('/plant/status', methods=['GET'])
     def get_plant_status():
-        plant_id = request.json['plant_id']
+        plant_id = request.args.get('plant_id')
         return jsonify({"status": application_layer.plant_status(plant_id)})
     
     @server.route('/plant/data', methods=['GET'])
