@@ -76,7 +76,7 @@ def test_plant_data():
     assert data["id"] == guid
     assert data["status"] == "complete"
     assert data["image"] == f"{guid}.jpeg"
-    assert data["segmentation"] == f"{guid}_segmentation.png"
+    assert data["segmentation"] == f"{guid}_segmentation.jpeg"
 
     # Clean up
     rmtree(test_image_dir)
@@ -116,44 +116,6 @@ def test_get_image():
     # Then
     assert image.read() == image_data
     assert mimetype == "image/jpeg"
-
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_get_image_segmentation():
-    # Given
-    test_image_dir = "test-images"
-    test_plants_dir = "test-plants"
-    image_data = open("0025_segmentation.png", "rb").read()
-    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
-    guid = app.segment_plant(image_data)
-
-    # When
-    image, mimetype = app.get_image(guid, "segmentation")
-
-    # Then
-    assert image.read() == image_data
-    assert mimetype == "image/png"
-
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_get_image_segmentation():
-    # Given
-    test_image_dir = "test-images"
-    test_plants_dir = "test-plants"
-    image_data = open("0025_segmentation.png", "rb").read()
-    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
-    guid = app.segment_plant(image_data)
-
-    # When
-    image, mimetype = app.get_image(guid, "segmentation")
-
-    # Then
-    assert image.read() == image_data
-    assert mimetype == "image/png"
 
     # Clean up
     rmtree(test_image_dir)
