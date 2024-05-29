@@ -32,13 +32,13 @@ def create_api(name, application_layer=None):
     
     @server.route('/plant/data', methods=['GET'])
     def get_plant_data():
-        plant_id = request.json['plant_id']
+        plant_id = request.args.get('plant_id')
         return jsonify(application_layer.plant_data(plant_id))
     
     @server.route('/plant/image', methods=['GET'])
     def get_plant_item():
-        plant_id = request.json['plant_id']
-        image_name = request.json['image_name']
+        plant_id = request.args.get('plant_id')
+        image_name = request.args.get('image_name')
         (image_data, mimetype) = application_layer.get_image(plant_id, image_name)
         if image_data:
             return send_file(image_data, mimetype=mimetype)

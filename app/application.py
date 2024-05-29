@@ -50,7 +50,7 @@ class Application(ApplicationInterface):
     
     def record_plant(self, plant_id, status):
         with open(self.plants_file, 'a') as fs:
-            fs.write(f"{plant_id},status,{plant_id}.jpeg,{plant_id}.png\n")
+            fs.write(f"{plant_id},{status},{plant_id}.jpeg,{plant_id}_segmentation.jpeg\n")
     
     def plant_status(self, plant_id):
         if plant_id in self._plants:
@@ -71,7 +71,7 @@ class Application(ApplicationInterface):
     def get_image(self, plant_id, image_name):
         # TODO: This needs a custom error message
         try:
-            image_file_path = os.path.join(self.image_folder, self._plants[plant_id][image_name])
+            image_file_path = os.path.join(self.image_folder, self._plants[plant_id][image_name].rstrip())
             return open(image_file_path, 'rb'), "image/png" if ("png" in image_file_path) else "image/jpeg"
         except:
             return None, None

@@ -113,25 +113,23 @@ def test_plant_submission_no_image(client):
 def test_plant_status_valid(client):
     # Given
     plant_id = 'test_guid'
-    header = {'content-type': 'application/json'}
     query_string = {'plant_id': plant_id}
 
     mock_application_layer.clear_plants()
     mock_application_layer.create_plant(plant_id, status="test_status")
     
     # When
-    response = client.get("/plant/status", headers=header, query_string=query_string)
+    response = client.get("/plant/status", query_string=query_string)
     
     # Then
     assert response.json["status"] == "test_status"
 
 def test_plant_status_bad(client):
     # Given
-    header = {'content-type': 'application/json'}
     json = {'plant_id': 'not real id'}
     
     # When
-    response = client.get("/plant/status", headers=header, json=json)
+    response = client.get("/plant/status", json=json)
     
     # Then
     assert response.json["status"] == "plant_not_found"
@@ -139,28 +137,26 @@ def test_plant_status_bad(client):
 def test_plant_data_valid(client):
     # Given
     plant_id = 'test_guid'
-    header = {'content-type': 'application/json'}
-    json = {'plant_id': plant_id}
+    query_string = {'plant_id': plant_id}
 
     mock_application_layer.clear_plants()
     mock_application_layer.create_plant(plant_id, status="complete")
     
     # When
-    response = client.get("/plant/data", headers=header, json=json)
+    response = client.get("/plant/data", query_string=query_string)
     
     # Then
     assert response.json == {"id": plant_id, "status": "complete", "image": f"{plant_id}.jpeg"}
 
 def test_plant_data_bad(client):
     # Given
-    header = {'content-type': 'application/json'}
-    json = {'plant_id': 'not real id'}
+    query_string = {'plant_id': 'not real id'}
 
     mock_application_layer.clear_plants()
     mock_application_layer.create_plant('test_guid', status="complete")
     
     # When
-    response = client.get("/plant/data", headers=header, json=json)
+    response = client.get("/plant/data", query_string=query_string)
     
     # Then
     assert response.json == {"id": "", "status": "", "image": ""}
@@ -168,11 +164,10 @@ def test_plant_data_bad(client):
 def test_plant_get_image_valid_image(client):
     # Given
     plant_id = 'test_guid'
-    header = {'content-type': 'application/json'}
-    json = {'plant_id': plant_id, 'image_name': 'image'}
+    query_string = {'plant_id': plant_id, 'image_name': 'image'}
     
     # When
-    response = client.get("/plant/image", headers=header, json=json)
+    response = client.get("/plant/image", query_string=query_string)
     
     # Then
     assert response.status_code == 200
@@ -182,11 +177,10 @@ def test_plant_get_image_valid_image(client):
 def test_plant_get_image_valid_segmentation(client):
     # Given
     plant_id = 'test_guid'
-    header = {'content-type': 'application/json'}
-    json = {'plant_id': plant_id, 'image_name': 'segmentation'}
+    query_string = {'plant_id': plant_id, 'image_name': 'segmentation'}
     
     # When
-    response = client.get("/plant/image", headers=header, json=json)
+    response = client.get("/plant/image", query_string=query_string)
     
     # Then
     assert response.status_code == 200
@@ -196,11 +190,10 @@ def test_plant_get_image_valid_segmentation(client):
 def test_plant_handles_bad_image_name_grab(client):
     # Given
     plant_id = 'test_guid'
-    header = {'content-type': 'application/json'}
-    json = {'plant_id': plant_id, 'image_name': 'image_not_found'}
+    query_string = {'plant_id': plant_id, 'image_name': 'image_not_found'}
     
     # When
-    response = client.get("/plant/image", headers=header, json=json)
+    response = client.get("/plant/image", query_string=query_string)
     
     # Then
     assert response.status_code == 400
@@ -208,11 +201,10 @@ def test_plant_handles_bad_image_name_grab(client):
 def test_plant_handles_bad_guid(client):
     # Given
     plant_id = 'bad_test_guid'
-    header = {'content-type': 'application/json'}
-    json = {'plant_id': plant_id, 'image_name': 'image_not_found'}
+    query_string = {'plant_id': plant_id, 'image_name': 'image_not_found'}
     
     # When
-    response = client.get("/plant/image", headers=header, json=json)
+    response = client.get("/plant/image", query_string=query_string)
     
     # Then
     assert response.status_code == 400
