@@ -3,3 +3,4 @@ flask-swagger
 pillow
 numpy
 pytest
+ultralytics
