@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 COPY app /app
 COPY requirements.txt /app
 COPY spike1n-seg.pt /app
