@@ -34,8 +34,12 @@ class Application(ApplicationInterface):
     def segment_plant(self, file):
         guid = str(uuid.uuid4())
         # TODO: Check if the image is valid
-        with open(os.path.join(self.image_folder, f'{guid}.jpeg'), 'wb') as fs:
-            fs.write(file)
+
+        try:
+            with open(os.path.join(self.image_folder, f'{guid}.jpeg'), 'wb') as fs:
+                fs.write(file)
+        except:
+            return None
 
         self.segmentation(os.path.join(self.image_folder, f'{guid}.jpeg'))[0].save(os.path.join(self.image_folder, f'{guid}_segmentation.jpeg'))
         self._plants[guid] = {

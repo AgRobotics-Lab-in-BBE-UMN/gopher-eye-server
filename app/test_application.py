@@ -139,3 +139,40 @@ def test_get_image_invalid_image_entry():
     # Clean up
     rmtree(test_image_dir)
     rmtree(test_plants_dir)
+
+def test_segment_plant_valid_image():
+    # Given
+    test_image_dir = "test-images"
+    test_plants_dir = "test-plants"
+    image_data = open("0025_segmentation.png", "rb").read()
+    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
+
+    # When
+    guid = app.segment_plant(image_data)
+
+    # Then
+    data = app.plant_data(guid)
+    assert guid != None
+    assert data["id"] == guid
+    assert data["status"] == "complete"
+    assert data["image"] == f"{guid}.jpeg"
+
+    # Clean up
+    rmtree(test_image_dir)
+    rmtree(test_plants_dir)
+
+def test_segment_plant_invalid_image():
+    # Given
+    test_image_dir = "test-images"
+    test_plants_dir = "test-plants"
+    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
+
+    # When
+    guid = app.segment_plant(None)
+
+    # Then
+    assert guid == None
+
+    # Clean up
+    rmtree(test_image_dir)
+    rmtree(test_plants_dir)
