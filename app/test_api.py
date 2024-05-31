@@ -59,6 +59,13 @@ class MockApplicationLayer(ApplicationInterface):
             return fs, "image/png" if ("png" in file) else "image/jpeg"
         except:
             return None, None
+        
+    def set_plant_ids(self, ids):
+        for id in ids:
+            self.create_plant(id)
+    
+    def get_plant_ids(self):
+        return list(self.plants.keys())
 
 mock_application_layer = MockApplicationLayer()
 
@@ -208,3 +215,27 @@ def test_plant_handles_bad_guid(client):
     
     # Then
     assert response.status_code == 400
+
+def test_get_plant_ids(client):
+    # Given
+    plant_ids = ['1', '2', '3', '4', '5']
+    mock_application_layer.set_plant_ids(plant_ids)
+    
+    # When
+    response = client.get("/plant/ids")
+    
+    # Then
+    assert response.status_code == 200
+    assert response.json == {"plant_ids": plant_ids}
+
+def test_get_plant_id_no_ids(client):
+    # Given
+    plant_ids = []
+    mock_application_layer.set_plant_ids(plant_ids)
+    
+    # When
+    response = client.get("/plant/ids")
+    
+    # Then
+    assert response.status_code == 200
+    assert response.json == {"plant_ids": plant_ids}
