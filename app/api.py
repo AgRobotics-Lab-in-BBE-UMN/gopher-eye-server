@@ -45,4 +45,8 @@ def create_api(name, application_layer=None):
         else: 
             abort(400)
 
+    @server.route('/plant/ids', methods=['GET'])
+    def get_plant_ids():
+        return jsonify({"plant_ids": application_layer.get_plant_ids()})
+
     return server

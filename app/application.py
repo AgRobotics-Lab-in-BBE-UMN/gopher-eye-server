@@ -85,3 +85,5 @@ class Application(ApplicationInterface):
         except:
             return None, None
         
+    def get_plant_ids(self):
+        return list(self._plants.keys())

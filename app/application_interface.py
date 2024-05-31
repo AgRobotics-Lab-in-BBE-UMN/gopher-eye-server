@@ -16,3 +16,7 @@ class ApplicationInterface(ABC):
     @abstractmethod
     def get_image(self ,plant_id, image_name):
         pass
+
+    @abstractmethod
+    def get_plant_ids(self):
+        pass

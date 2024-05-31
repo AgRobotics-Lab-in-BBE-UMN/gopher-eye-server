@@ -4,6 +4,7 @@ from application import Application
 from shutil import rmtree
 import os
 
+
 @pytest.fixture
 def cleanup():
     to_delete = []
@@ -11,6 +12,7 @@ def cleanup():
     for item in to_delete:
         if os.path.exists(item):
             rmtree(item)
+
 
 def test_app_init(cleanup):
     # Given
@@ -29,6 +31,7 @@ def test_app_init(cleanup):
     assert os.path.exists(test_image_dir)
     assert os.path.exists(app.plants_file)
 
+
 def test_submit_plant(cleanup):
     # Given
     test_image_dir = "test-images"
@@ -46,6 +49,7 @@ def test_submit_plant(cleanup):
     assert app._plants[guid]["image"] == f"{guid}.jpeg"
     assert open(os.path.join(test_image_dir, f"{guid}.jpeg"), "rb").read() == image_data
 
+
 def test_plant_status(cleanup):
     # Given
     test_image_dir = "test-images"
@@ -60,6 +64,7 @@ def test_plant_status(cleanup):
 
     # Then
     assert status == "complete"
+
 
 def test_plant_data(cleanup):
     # Given
@@ -80,6 +85,7 @@ def test_plant_data(cleanup):
     assert data["masks"] == app._plants[guid]["masks"]
     assert data["bounding_boxes"] == app._plants[guid]["bounding_boxes"]
 
+
 def test_plant_data_invalid_plant_id(cleanup):
     # Given
     test_image_dir = "test-images"
@@ -94,6 +100,7 @@ def test_plant_data_invalid_plant_id(cleanup):
 
     # Then
     assert data.items() == {}.items()
+
 
 def test_get_image(cleanup):
     # Given
@@ -111,6 +118,7 @@ def test_get_image(cleanup):
     assert image.read() == image_data
     assert mimetype == "image/jpeg"
 
+
 def test_get_image_invalid_image_entry(cleanup):
     # Given
     test_image_dir = "test-images"
@@ -127,8 +135,10 @@ def test_get_image_invalid_image_entry(cleanup):
     assert image == None
     assert mimetype == None
 
+
 def test_segment_plant_valid_image(cleanup):
     import ultralytics
+
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
@@ -150,7 +160,8 @@ def test_segment_plant_valid_image(cleanup):
     assert isinstance(data["masks"][0][0], list)
     assert len(data["masks"]) > 0
     assert len(data["masks"][0]) > 0
-    assert len(data["masks"][0][0])  == 2
+    assert len(data["masks"][0][0]) == 2
+
 
 def test_segment_plant_invalid_image(cleanup):
     # Given
@@ -164,3 +175,33 @@ def test_segment_plant_invalid_image(cleanup):
 
     # Then
     assert guid == None
+
+
+def test_get_plant_ids(cleanup):
+    # Given
+    test_image_dir = "test-images"
+    test_plants_dir = "test-plants"
+    cleanup += [test_image_dir, test_plants_dir]
+    image_data = open("0025.jpg", "rb").read()
+    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
+    guids = [app.segment_plant(image_data) for i in range(5)]
+
+    # When
+    plant_ids = app.get_plant_ids()
+
+    # Then
+    assert plant_ids == guids
+
+
+def test_get_plant_ids_empty(cleanup):
+    # Given
+    test_image_dir = "test-images"
+    test_plants_dir = "test-plants"
+    cleanup += [test_image_dir, test_plants_dir]
+    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
+
+    # When
+    plant_ids = app.get_plant_ids()
+
+    # Then
+    assert plant_ids == []
