@@ -1,8 +1,8 @@
 import os
-import shutil
 import uuid
 from application_interface import ApplicationInterface
 from ultralytics import YOLO
+import json
 
 class Application(ApplicationInterface):
     def __init__(self, image_folder="images", plants="plants"):
@@ -17,12 +17,13 @@ class Application(ApplicationInterface):
             with open(self.plants_file, 'r') as fs:
                 line = fs.readline()
                 while line:
-                    info = line.replace(" ", "").split(",")
-                    self._plants[info[0]] = {
-                        "plant_id": info[0],
-                        "status": info[1],
-                        "image": info[2],
-                        "segmentation": info[3]
+                    data = json.loads(line)
+                    self._plants[data["plant_id"]] = {
+                        "plant_id": data["plant_id"],
+                        "status": data["status"],
+                        "image": data["image"],
+                        "bounding_boxes": data["bounding_boxes"],
+                        "masks": data["masks"],
                     }
                     line = fs.readline()
         else:
@@ -34,23 +35,35 @@ class Application(ApplicationInterface):
     def segment_plant(self, file):
         guid = str(uuid.uuid4())
         # TODO: Check if the image is valid
-        with open(os.path.join(self.image_folder, f'{guid}.jpeg'), 'wb') as fs:
-            fs.write(file)
 
-        self.segmentation(os.path.join(self.image_folder, f'{guid}.jpeg'))[0].save(os.path.join(self.image_folder, f'{guid}_segmentation.jpeg'))
+        try:
+            with open(os.path.join(self.image_folder, f'{guid}.jpeg'), 'wb') as fs:
+                fs.write(file)
+        except:
+            return None
+
+        results = self.segmentation(os.path.join(self.image_folder, f'{guid}.jpeg'))[0]
         self._plants[guid] = {
             "plant_id": guid,
             "status": "complete",
             "image": f"{guid}.jpeg",
-            "segmentation": f"{guid}_segmentation.jpeg"
+            "bounding_boxes": [],
+            "masks": []
         }
-        self.record_plant(guid, self._plants[guid]["status"])
+
+        if results.boxes:
+            self._plants[guid]["bounding_boxes"] = results.boxes.xyxyn.tolist()
+
+        if results.masks:
+            self._plants[guid]["masks"] = [mask.tolist() for mask in results.masks.xyn]
+
+        self.record_plant(self._plants[guid])
 
         return guid
     
-    def record_plant(self, plant_id, status):
+    def record_plant(self, data):
         with open(self.plants_file, 'a') as fs:
-            fs.write(f"{plant_id},{status},{plant_id}.jpeg,{plant_id}_segmentation.jpeg\n")
+            fs.write(f"{json.dumps(data)}\n")
     
     def plant_status(self, plant_id):
         if plant_id in self._plants:
@@ -58,13 +71,9 @@ class Application(ApplicationInterface):
         return "plant not found"
     
     def plant_data(self, plant_id):
-        response = {"id": "", "status": "", "image": ""}
+        response = {}
         if plant_id in self._plants:
-            plant = self._plants[plant_id]
-            response["id"] = plant_id
-            response["status"] = plant["status"]
-            response["image"] = plant["image"]
-            response["segmentation"] = plant["segmentation"]
+            response = self._plants[plant_id]
 
         return response
     

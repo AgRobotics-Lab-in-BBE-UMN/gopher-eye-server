@@ -1,12 +1,22 @@
 import pytest
+import ultralytics.engine
 from application import Application
 from shutil import rmtree
 import os
 
-def test_app_init():
+@pytest.fixture
+def cleanup():
+    to_delete = []
+    yield to_delete
+    for item in to_delete:
+        if os.path.exists(item):
+            rmtree(item)
+
+def test_app_init(cleanup):
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
+    cleanup += [test_image_dir, test_plants_dir]
 
     # When
     app = Application(image_folder=test_image_dir, plants=test_plants_dir)
@@ -19,16 +29,13 @@ def test_app_init():
     assert os.path.exists(test_image_dir)
     assert os.path.exists(app.plants_file)
 
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_submit_plant():
+def test_submit_plant(cleanup):
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
     image_data = open("0025.jpg", "rb").read()
     app = Application(image_folder=test_image_dir, plants=test_plants_dir)
+    cleanup += [test_image_dir, test_plants_dir]
 
     # When
     guid = app.segment_plant(image_data)
@@ -39,17 +46,14 @@ def test_submit_plant():
     assert app._plants[guid]["image"] == f"{guid}.jpeg"
     assert open(os.path.join(test_image_dir, f"{guid}.jpeg"), "rb").read() == image_data
 
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_plant_status():
+def test_plant_status(cleanup):
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
     image_data = open("0025.jpg", "rb").read()
     app = Application(image_folder=test_image_dir, plants=test_plants_dir)
     guid = app.segment_plant(image_data)
+    cleanup += [test_image_dir, test_plants_dir]
 
     # When
     status = app.plant_status(guid)
@@ -57,15 +61,12 @@ def test_plant_status():
     # Then
     assert status == "complete"
 
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_plant_data():
+def test_plant_data(cleanup):
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
     image_data = open("0025.jpg", "rb").read()
+    cleanup += [test_image_dir, test_plants_dir]
     app = Application(image_folder=test_image_dir, plants=test_plants_dir)
     guid = app.segment_plant(image_data)
 
@@ -73,19 +74,17 @@ def test_plant_data():
     data = app.plant_data(guid)
 
     # Then
-    assert data["id"] == guid
+    assert data["plant_id"] == guid
     assert data["status"] == "complete"
     assert data["image"] == f"{guid}.jpeg"
-    assert data["segmentation"] == f"{guid}_segmentation.jpeg"
+    assert data["masks"] == app._plants[guid]["masks"]
+    assert data["bounding_boxes"] == app._plants[guid]["bounding_boxes"]
 
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_plant_data_invalid_plant_id():
+def test_plant_data_invalid_plant_id(cleanup):
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
+    cleanup += [test_image_dir, test_plants_dir]
     image_data = open("0025.jpg", "rb").read()
     app = Application(image_folder=test_image_dir, plants=test_plants_dir)
     guid = app.segment_plant(image_data)
@@ -94,18 +93,13 @@ def test_plant_data_invalid_plant_id():
     data = app.plant_data("invalid-plant-id")
 
     # Then
-    assert data["id"] == ""
-    assert data["status"] == ""
-    assert data["image"] == ""
+    assert data.items() == {}.items()
 
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_get_image():
+def test_get_image(cleanup):
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
+    cleanup += [test_image_dir, test_plants_dir]
     image_data = open("0025.jpg", "rb").read()
     app = Application(image_folder=test_image_dir, plants=test_plants_dir)
     guid = app.segment_plant(image_data)
@@ -117,15 +111,12 @@ def test_get_image():
     assert image.read() == image_data
     assert mimetype == "image/jpeg"
 
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
-
-def test_get_image_invalid_image_entry():
+def test_get_image_invalid_image_entry(cleanup):
     # Given
     test_image_dir = "test-images"
     test_plants_dir = "test-plants"
-    image_data = open("0025_segmentation.png", "rb").read()
+    cleanup += [test_image_dir, test_plants_dir]
+    image_data = open("bad.jpeg", "rb").read()
     app = Application(image_folder=test_image_dir, plants=test_plants_dir)
     guid = app.segment_plant(image_data)
 
@@ -136,6 +127,40 @@ def test_get_image_invalid_image_entry():
     assert image == None
     assert mimetype == None
 
-    # Clean up
-    rmtree(test_image_dir)
-    rmtree(test_plants_dir)
+def test_segment_plant_valid_image(cleanup):
+    import ultralytics
+    # Given
+    test_image_dir = "test-images"
+    test_plants_dir = "test-plants"
+    cleanup += [test_image_dir, test_plants_dir]
+    image_data = open("0025.jpg", "rb").read()
+    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
+
+    # When
+    guid = app.segment_plant(image_data)
+
+    # Then
+    data = app.plant_data(guid)
+    assert guid != None
+    assert data["plant_id"] == guid
+    assert data["status"] == "complete"
+    assert data["image"] == f"{guid}.jpeg"
+    assert isinstance(data["masks"], list)
+    assert isinstance(data["masks"][0], list)
+    assert isinstance(data["masks"][0][0], list)
+    assert len(data["masks"]) > 0
+    assert len(data["masks"][0]) > 0
+    assert len(data["masks"][0][0])  == 2
+
+def test_segment_plant_invalid_image(cleanup):
+    # Given
+    test_image_dir = "test-images"
+    test_plants_dir = "test-plants"
+    cleanup += [test_image_dir, test_plants_dir]
+    app = Application(image_folder=test_image_dir, plants=test_plants_dir)
+
+    # When
+    guid = app.segment_plant(None)
+
+    # Then
+    assert guid == None

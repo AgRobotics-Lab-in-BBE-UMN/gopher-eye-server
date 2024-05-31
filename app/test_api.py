@@ -18,7 +18,9 @@ class MockApplicationLayer(ApplicationInterface):
         self.plants[guid] = {
             "plant_id": guid,
             "status": "submitted",
-            "image": f"{guid}.jpeg"
+            "image": f"{guid}.jpeg",
+            "masks": [[[0, 0], [1, 1]]],
+            "bounding_boxes": [[0.25, 0.25, 0.5, 0.5]]
         }
         return guid
     
@@ -27,7 +29,8 @@ class MockApplicationLayer(ApplicationInterface):
             "plant_id": plant_id,
             "status": status,
             "image": f"{plant_id}.jpeg" if image is None else image,
-            "segmentation": f"{plant_id}_segmentation.jpeg"
+            "masks": [[[0, 0], [1, 1]]],
+            "bounding_boxes": [[0.25, 0.25, 0.5, 0.5]]
         }
 
     def set_plant_status(self, plant_id, status):
@@ -42,12 +45,9 @@ class MockApplicationLayer(ApplicationInterface):
         return "plant_not_found"
     
     def plant_data(self, plant_id):
-        response = {"id": "", "status": "", "image": ""}
+        response = {"plant_id": "", "status": "", "image": "", "masks": [], "bounding_boxes": []}
         if plant_id in self.plants:
-            plant = self.plants[plant_id]
-            response["id"] = plant_id
-            response["status"] = plant["status"]
-            response["image"] = plant["image"]
+            response = self.plants[plant_id]
 
         return response
     
@@ -146,7 +146,7 @@ def test_plant_data_valid(client):
     response = client.get("/plant/data", query_string=query_string)
     
     # Then
-    assert response.json == {"id": plant_id, "status": "complete", "image": f"{plant_id}.jpeg"}
+    assert response.json == {"plant_id": plant_id, "status": "complete", "image": f"{plant_id}.jpeg", "masks": [[[0, 0], [1, 1]]], "bounding_boxes": [[0.25, 0.25, 0.5, 0.5]]}
 
 def test_plant_data_bad(client):
     # Given
@@ -159,7 +159,7 @@ def test_plant_data_bad(client):
     response = client.get("/plant/data", query_string=query_string)
     
     # Then
-    assert response.json == {"id": "", "status": "", "image": ""}
+    assert response.json == {"plant_id": "", "status": "", "image": "", "masks": [], "bounding_boxes": []}
 
 def test_plant_get_image_valid_image(client):
     # Given
