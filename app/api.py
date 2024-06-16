@@ -60,7 +60,7 @@ def create_api(name, application_layer=None):
 
     @server.route("/register", methods=["POST"])
     def register():
-        if request.args.get("status") == 200:
+        if request.args.get("status") == "200":
             return (
                 jsonify(
                     {
@@ -70,7 +70,7 @@ def create_api(name, application_layer=None):
                 ),
                 200,
             )
-        elif request.args.get("status") == 201:
+        elif request.args.get("status") == "201":
             return (
                 jsonify(
                     {
@@ -80,7 +80,7 @@ def create_api(name, application_layer=None):
                 ),
                 201,
             )
-        elif request.args.get("status") == 401:
+        elif request.args.get("status") == "401":
             return jsonify({"status": 401, "message": "Something went wrong"}), 401
         else:
             return (
@@ -95,7 +95,7 @@ def create_api(name, application_layer=None):
 
     @server.route("/otpVerification", methods=["POST"])
     def verify_otp():
-        if request.args.get("status") == 200:
+        if request.args.get("status") == "200":
             return (
                 jsonify(
                     {
@@ -106,7 +106,7 @@ def create_api(name, application_layer=None):
                 ),
                 200,
             )
-        elif request.args.get("status") == 201:
+        elif request.args.get("status") == "201":
             return (
                 jsonify(
                     {
@@ -117,7 +117,7 @@ def create_api(name, application_layer=None):
                 ),
                 201,
             )
-        elif request.args.get("status") == 401:
+        elif request.args.get("status") == "401":
             return jsonify({"status": 401, "message": "OTP is not valid"}), 401
         else:
             return (
@@ -133,7 +133,7 @@ def create_api(name, application_layer=None):
 
     @server.route("/signin", methods=["POST"])
     def signin():
-        if request.args.get("status") == 200:
+        if request.args.get("status") == "200":
             return (
                 jsonify(
                     {
@@ -144,7 +144,7 @@ def create_api(name, application_layer=None):
                 ),
                 200,
             )
-        elif request.args.get("status") == 201:
+        elif request.args.get("status") == "201":
             return (
                 jsonify(
                     {
@@ -155,7 +155,7 @@ def create_api(name, application_layer=None):
                 ),
                 201,
             )
-        elif request.args.get("status") == 401:
+        elif request.args.get("status") == "401":
             return (
                 jsonify(
                     {
