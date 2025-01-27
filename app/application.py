@@ -4,7 +4,7 @@ from application_interface import ApplicationInterface
 from ultralytics import YOLO
 import json
 
-class Application(ApplicationInterface):
+class Application():
     def __init__(self, image_folder="images", plants="plants"):
         self.image_folder = image_folder
         os.makedirs(self.image_folder, exist_ok=True)
