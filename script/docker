@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 docker build -t gopher-eye-server .
-docker run -v $(pwd)/app:/app -v $(pwd)/plants:/app/plants -v $(pwd)/images:/app/images -v $(pwd)/spike1n-seg.pt:/app/spike1n-seg.pt -p 127.0.0.1:5000:5000 -d gopher-eye-server
+docker run -v $(pwd)/app:/app -v $(pwd)/plants:/app/plants -v $(pwd)/images:/app/images -v $(pwd)/swinv2-tiny-patch4-window8-256:/app/swinv2-tiny-patch4-window8-256 -v $(pwd)/yolo11m-seg.pt:/app/yolo11m-seg.pt -p 127.0.0.1:5000:5000 -d gopher-eye-server
