@@ -2,7 +2,10 @@ import os
 import uuid
 from application_interface import ApplicationInterface
 from ultralytics import YOLO
+from classification import Classification
 import json
+from PIL import Image
+import numpy as np
 
 class Application(ApplicationInterface):
     def __init__(self, image_folder="images", plants="plants"):
@@ -24,13 +27,17 @@ class Application(ApplicationInterface):
                         "image": data["image"],
                         "bounding_boxes": data["bounding_boxes"],
                         "masks": data["masks"],
+                        "labels": data["labels"]
                     }
                     line = fs.readline()
         else:
             with open(self.plants_file, 'w') as fs:
                 pass
 
-        self.segmentation = YOLO("spike1n-seg.pt")
+        self.segmentation = YOLO("yolo11s-seg.pt")
+        label2id = {'Healthy-Leaf': 0, 'Downy-Leaf': 1, 'Powdery-Leaf': 2}
+        id2label = {0: 'Healthy-Leaf', 1: 'Downy-Leaf', 2: 'Powdery-Leaf'}
+        self.classification = Classification("swinv2-tiny-patch4-window8-256", label2id=label2id, id2label=id2label)
 
     def segment_plant(self, file):
         guid = str(uuid.uuid4())
@@ -48,7 +55,8 @@ class Application(ApplicationInterface):
             "status": "complete",
             "image": f"{guid}.jpeg",
             "bounding_boxes": [],
-            "masks": []
+            "masks": [],
+            "labels": []
         }
 
         if results.boxes:
@@ -56,7 +64,17 @@ class Application(ApplicationInterface):
 
         if results.masks:
             self._plants[guid]["masks"] = [mask.tolist() for mask in results.masks.xyn]
-
+        
+        for i, mask in enumerate(self._plants[guid]["masks"]):
+            image = Image.open(os.path.join(self.image_folder, f'{guid}.jpeg'))
+            bbox = self._plants[guid]["bounding_boxes"][i]
+            left = int(bbox[0] * image.width)
+            top = int(bbox[1] * image.height)
+            right = int(bbox[2] * image.width)
+            bottom = int(bbox[3] * image.height)
+            subimage = image.crop((left, top, right, bottom))
+            label = self.classification.classify(subimage)
+            self._plants[guid]["labels"].append(label)
         self.record_plant(self._plants[guid])
 
         return guid
