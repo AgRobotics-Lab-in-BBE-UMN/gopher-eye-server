@@ -39,5 +39,9 @@ git clone https://github.com/AgRobotics-Lab-in-BBE-UMN/gopher-eye-server.git
 cd gopher-eye-server
 git pull
 
+cp nginx/available-sites/gopher-eye.com /etc/nginx/sites-available/gopher-eye.com
+sudo ln -s /etc/nginx/sites-available/gopher-eye.com /etc/nginx/sites-enabled/gopher-eye.com
+sudo systemctl restart nginx
+
 # Launch the docker container
 ./script/docker
