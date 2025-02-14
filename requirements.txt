@@ -1,3 +1,4 @@
+httplib2
 Flask
 flask-swagger
 pillow

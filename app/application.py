@@ -75,6 +75,7 @@ class Application(ApplicationInterface):
             subimage = image.crop((left, top, right, bottom))
             label = self.classification.classify(subimage)
             self._plants[guid]["labels"].append(label)
+            
         self.record_plant(self._plants[guid])
 
         return guid
