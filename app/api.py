@@ -176,5 +176,9 @@ def create_api(name, application_layer=None):
                 ),
                 200,
             )
+            
+    @server.route("/status", methods=["GET"])
+    def get_status():
+        return jsonify({"status": "ok"})
 
     return server
