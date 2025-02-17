@@ -34,10 +34,10 @@ class Application(ApplicationInterface):
             with open(self.plants_file, 'w') as fs:
                 pass
 
-        self.segmentation = YOLO("yolo11s-seg.pt")
+        self.segmentation = YOLO("models/yolo11m-seg.pt")
         label2id = {'Healthy-Leaf': 0, 'Downy-Leaf': 1, 'Powdery-Leaf': 2}
         id2label = {0: 'Healthy-Leaf', 1: 'Downy-Leaf', 2: 'Powdery-Leaf'}
-        self.classification = Classification("swinv2-tiny-patch4-window8-256", label2id=label2id, id2label=id2label)
+        self.classification = Classification("models/swinv2-tiny-patch4-window8-256", label2id=label2id, id2label=id2label)
 
     def segment_plant(self, file):
         guid = str(uuid.uuid4())

@@ -5,6 +5,5 @@ test-plants
 .vscode
 .pytest_cache
 __pycache__
-models
 .DS_Store
 scratch
