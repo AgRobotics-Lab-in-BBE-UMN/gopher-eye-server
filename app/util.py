@@ -1,14 +1,10 @@
-import json
+import os
 
 def getPostgresURI():
-    # Read json file
-    with open("creds/db.json") as f:
-        creds = json.load(f)
+    user = os.getenv('POSTGRES_USER', '')
+    password = os.getenv('POSTGRES_PASSWORD', '')
+    host = os.getenv('POSTGRES_HOST', 'localhost')
+    port = os.getenv('POSTGRES_PORT', '5432')
+    dbname = os.getenv('POSTGRES_DB', 'your_default_dbname')
 
-    user = str(creds["user"])
-    password = str(creds["password"])
-    host = str(creds["host"])
-    port = ":" + str(creds["port"]) if str(creds["port"]) else ""
-    database = str(creds["database"])
-
-    return f'postgresql+psycopg2://{user}:{password}@{host}{port}/{database}'
+    return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"

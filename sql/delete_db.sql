@@ -1,0 +1,11 @@
+\c "gopher_eye";
+
+DROP TABLE IF EXISTS "ownership";
+DROP TABLE IF EXISTS "bounding_box";
+DROP TABLE IF EXISTS "mask";
+DROP TABLE IF EXISTS "membership";
+DROP TABLE IF EXISTS "sample";
+DROP TABLE IF EXISTS "record";
+DROP TABLE IF EXISTS "site";
+DROP TABLE IF EXISTS "group";
+DROP TABLE IF EXISTS "user";

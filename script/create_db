@@ -1,0 +1,10 @@
+#! /usr/bin/env bash
+
+# Variables
+SQL_SCRIPT_PATH="sql/create_db.sql"
+
+# Export password to avoid prompt
+export PGPASSWORD=$DB_PASSWORD
+
+# Run the SQL script
+psql -h $DB_HOST -p $DB_PORT -d postgres -U $DB_USER -f $SQL_SCRIPT_PATH

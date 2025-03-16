@@ -1,98 +1,169 @@
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from app import db
+from sqlalchemy.orm import relationship
+
+db = SQLAlchemy()
 
 class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.String(255), primary_key=True)
-    username = db.Column(db.String(255), nullable=True, unique=False)
-    first_name = db.Column(db.String(255), nullable=True, unique=False)
-    last_name = db.Column(db.String(255), nullable=True, unique=False)
-    email = db.Column(db.String(255), nullable=False, unique=True)
-    registration_date = db.Column(db.DateTime, nullable=True, default=datetime.utcnow())
-    last_login = db.Column(db.DateTime, nullable=True, default=datetime.utcnow())
-
-
-    def __init__(self, id, email, first_name=None, last_name=None, registration_date=None, last_login=None):
-        self.id = id
-        self.email = email
-        self.first_name = first_name
-        self.last_name = last_name
-        if registration_date is None:
-            registration_date = registration_date
-        if self.last_login == registration_date:
-            self.last_login = last_login
-
-    def __repr__(self):
-        return f"<User {self.email}>"
-
+    __tablename__ = "user"
+    
+    id = db.Column(db.String, primary_key=True)
+    first_name = db.Column(db.String)
+    last_name = db.Column(db.String)
+    user_name = db.Column(db.String)
+    join_date = db.Column(db.Date, default=datetime.utcnow().date)
+    last_login = db.Column(db.Date)
+    
+    # Relationships
+    samples = relationship("Sample", back_populates="creator")
+    groups = relationship("Group", secondary="membership", back_populates="users")
+    
     def serialize(self):
         return {
             'id': self.id,
-            'email': self.email,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            'registration_date': self.registration_date,
+            'user_name': self.user_name,
+            'join_date': self.join_date,
             'last_login': self.last_login
         }
 
-class GroupType(db.Model):
-    __tablename__ = 'group_type'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), nullable=False)
-    description = db.Column(db.String(255), nullable=True)
 
-    def __init__(self, name, description):
-        self.name = name
-        self.description = description
-
-    def __repr__(self):
-        return f"<GroupTypes {self.type}>"
-
-    def serialize(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description
-        }
-
-class UserGroup(db.Model):
-    __tablename__ = 'user_group'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), nullable=False)
-    group_type_id = db.Column(db.Integer, db.ForeignKey('group_type.id'), nullable=False)
-    description = db.Column(db.String(255), nullable=True)
-
-
-    def __init__(self, name, group_type_id, description):
-        self.name = name
-        self.group_type_id = group_type_id
-        self.description = description
-
-    def __repr__(self):
-        return f"<UserGroup {self.name}>"
-
-    def serialize(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'group_type_id': self.group_type_id,
-            'description': self.description
-        }
+class Group(db.Model):
+    __tablename__ = "group"
     
+    id = db.Column(db.String, primary_key=True)
+    type = db.Column(db.String)
+    description = db.Column(db.String)
+    
+    # Relationships
+    users = relationship("User", secondary="membership", back_populates="groups")
+    sites = relationship("Site", back_populates="permission_group")
+    records = relationship("Record", secondary="ownership", back_populates="groups")
+    
+    def serialize(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'description': self.description
+        }
+
+
 class Membership(db.Model):
-    __tablename__ = "memberhsip"
-    user_id = db.Column(db.String(255), db.ForeignKey('users.id'), primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey('user_group.id'), primary_key=True)
-
-    def __init__(self, user_id, group_id):
-        self.user_id = user_id
-        self.group_id = group_id
+    __tablename__ = "membership"
     
-    def __repr__(self):
-        return f"<Membership {self.user_id} {self.group_id}>"
+    user_id = db.Column(db.String, db.ForeignKey('user.id'), primary_key=True)
+    group_id = db.Column(db.String, db.ForeignKey('group.id'), primary_key=True)
+
+
+class Site(db.Model):
+    __tablename__ = "site"
+    
+    id = db.Column(db.String, primary_key=True)
+    permission = db.Column(db.String, db.ForeignKey('group.id'))
+    creation_date = db.Column(db.Date, default=datetime.utcnow().date)
+    gps_longitude = db.Column(db.Integer)
+    gps_latitude = db.Column(db.Integer)
+    description = db.Column(db.String)
+    
+    # Relationships
+    permission_group = relationship("Group", back_populates="sites")
+    records = relationship("Record", back_populates="site")
     
     def serialize(self):
         return {
-            'user_id': self.user_id,
-            'group_id': self.group_id
+            'id': self.id,
+            'permission': self.permission,
+            'creation_date': self.creation_date,
+            'gps_longitude': self.gps_longitude,
+            'gps_latitude': self.gps_latitude,
+            'description': self.description
+        }
+
+
+class Record(db.Model):
+    __tablename__ = "record"
+    
+    id = db.Column(db.String, primary_key=True)
+    site_id = db.Column(db.String, db.ForeignKey('site.id'))
+    creation_date = db.Column(db.Date, default=datetime.utcnow().date)
+    
+    # Relationships
+    site = relationship("Site", back_populates="records")
+    samples = relationship("Sample", back_populates="record")
+    groups = relationship("Group", secondary="ownership", back_populates="records")
+    
+    def serialize(self):
+        return {
+            'id': self.id,
+            'site_id': self.site_id,
+            'creation_date': self.creation_date
+        }
+
+
+class Ownership(db.Model):
+    __tablename__ = "ownership"
+    
+    group_id = db.Column(db.String, db.ForeignKey('group.id'), primary_key=True)
+    record_id = db.Column(db.String, db.ForeignKey('record.id'), primary_key=True)
+
+
+class Sample(db.Model):
+    __tablename__ = "sample"
+    
+    id = db.Column(db.String, primary_key=True)
+    record_id = db.Column(db.String, db.ForeignKey('record.id'))
+    created_date = db.Column(db.Date, default=datetime.utcnow().date)
+    created_by = db.Column(db.String, db.ForeignKey('user.id'))
+    image_url = db.Column(db.String)
+    type = db.Column(db.String)
+    processing_status = db.Column(db.String)
+    
+    # Relationships
+    record = relationship("Record", back_populates="samples")
+    creator = relationship("User", back_populates="samples")
+    masks = relationship("Mask", back_populates="sample")
+    bounding_boxes = relationship("BoundingBox", back_populates="sample")
+    
+    def serialize(self):
+        return {
+            'id': self.id,
+            'record_id': self.record_id,
+            'created_date': self.created_date,
+            'created_by': self.created_by,
+            'image_url': self.image_url,
+            'type': self.type,
+            'processing_status': self.processing_status
+        }
+
+
+class Mask(db.Model):
+    __tablename__ = "mask"
+    
+    image_id = db.Column(db.String, db.ForeignKey('sample.id'), primary_key=True)
+    mask = db.Column(db.String)
+    
+    # Relationships
+    sample = relationship("Sample", back_populates="masks")
+    
+    def serialize(self):
+        return {
+            'image_id': self.image_id,
+            'mask': self.mask
+        }
+
+
+class BoundingBox(db.Model):
+    __tablename__ = "bounding_box"
+    
+    image_id = db.Column(db.String, db.ForeignKey('sample.id'), primary_key=True)
+    box = db.Column(db.String)
+    
+    # Relationships
+    sample = relationship("Sample", back_populates="bounding_boxes")
+    
+    def serialize(self):
+        return {
+            'image_id': self.image_id,
+            'box': self.box
         }
