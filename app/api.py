@@ -19,6 +19,23 @@ def create_api(name, application_layer=None):
                     )
                 }
             )
+            
+    @server.route("/dl/segmentation_spike", methods=["PUT"])
+    def segment_spike():
+        if request.mimetype != "multipart/form-data":
+            print(f"{request.content_type} is not 'multipart/form-data'")
+            abort(400)
+        elif "image" not in request.files:
+            abort(400)
+        else:
+            return jsonify(
+                {
+                    "plant_id": application_layer.segment_plant(
+                        request.files["image"].read(),
+                        task="spike"
+                    )
+                }
+            )
 
     @server.route("/perf/segmentation", methods=["PUT"])
     def perf_test_segementation():

@@ -25,7 +25,7 @@ def test_app_init(cleanup):
 
     # Then
     assert app.image_folder == test_image_dir
-    assert app.plants_file == f"{test_plants_dir}/plants.csv"
+    assert app.plants_file == f"{test_plants_dir}/plants.json"
     assert os.path.exists(test_image_dir)
     assert os.path.exists(test_plants_dir)
     assert os.path.exists(test_image_dir)

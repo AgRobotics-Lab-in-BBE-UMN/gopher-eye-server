@@ -1,6 +1,7 @@
 from httplib2 import Credentials
 from api import create_api
 from application import Application
+import platform
 # from scratch import firebase_login
 
 if __name__ == '__main__':
@@ -10,4 +11,7 @@ if __name__ == '__main__':
 
     # Initialize Flask app
     app = create_api(__name__, Application())
-    app.run(host="0.0.0.0", port=5000)
+    if platform.system() == 'Darwin':
+        app.run(host="0.0.0.0", port=5555)
+    else:
+        app.run(host="0.0.0.0", port=5000)
