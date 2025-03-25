@@ -21,16 +21,16 @@ def create_api(name, application_layer=None, **kwargs):
     async def register(user: Annotated[dict, Depends(get_firebase_user_from_token)]):
         user_id = user["user_id"]
         try:
-            UserRepository.get_by_id(user_id)
+            # UserRepository.get_by_id(user_id)
             return JSONResponse({"status": "User already exists"})
         except:
-            new_user = User(
-                id=user_id,
-                email=user["email"],
-                join_date=datetime.now(timezone.utc).date(),
-                last_login=datetime.now(timezone.utc).date(),
-            )
-            UserRepository.create(new_user)
+            # new_user = User(
+            #     id=user_id,
+            #     email=user["email"],
+            #     join_date=datetime.now(timezone.utc).date(),
+            #     last_login=datetime.now(timezone.utc).date(),
+            # )
+            # UserRepository.create(new_user)
             return JSONResponse({"status": "User registered successfully"})
         return JSONResponse({"status": "ok"})
 
