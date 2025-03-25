@@ -7,3 +7,5 @@ test-plants
 __pycache__
 .DS_Store
 scratch
+models.server
+runs

@@ -1,6 +1,6 @@
 import pytest
 import ultralytics.engine
-from application import Application
+from app.application import Application
 from shutil import rmtree
 import os
 

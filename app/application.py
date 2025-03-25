@@ -1,8 +1,8 @@
 import os
 import uuid
-from application_interface import ApplicationInterface
 from ultralytics import YOLO
-from classification import Classification
+from app.application_interface import ApplicationInterface
+from app.classification import Classification
 import json
 from PIL import Image
 import numpy as np
