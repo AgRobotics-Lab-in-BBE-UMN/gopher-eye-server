@@ -3,8 +3,8 @@ from fastapi.responses import JSONResponse, FileResponse
 from typing import Optional
 from app.config import get_firebase_user_from_token
 from typing import Annotated
-from app.repositories.user_repo import UserReposoitory
-from app.model import User
+from app.repositories.user_repo import UserRepository
+from app.models import User
 from datetime import datetime, timezone
 
 
@@ -21,7 +21,7 @@ def create_api(name, application_layer=None, **kwargs):
     async def register(user: Annotated[dict, Depends(get_firebase_user_from_token)]):
         user_id = user["user_id"]
         try:
-            UserReposoitory.get_by_id(user_id)
+            UserRepository.get_by_id(user_id)
             return JSONResponse({"status": "User already exists"})
         except:
             new_user = User(
@@ -30,11 +30,9 @@ def create_api(name, application_layer=None, **kwargs):
                 join_date=datetime.now(timezone.utc).date(),
                 last_login=datetime.now(timezone.utc).date(),
             )
-            UserReposoitory.create(new_user)
+            UserRepository.create(new_user)
             return JSONResponse({"status": "User registered successfully"})
         return JSONResponse({"status": "ok"})
-
-    # Uncomment and adapt the following routes as needed:
 
     # @app.put("/dl/segmentation")
     # async def segment_plant(image: UploadFile):

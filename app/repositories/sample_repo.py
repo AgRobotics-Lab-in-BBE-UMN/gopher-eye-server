@@ -20,7 +20,7 @@ class SampleRepository:
             db.session.query(Sample)
             .join(Record, Sample.record_id == Record.id)
             .join(Ownership, Ownership.record_id == Record.id)
-            .filter(Group.id == group.id)
+            .filter(Ownership.group_id == group.id)
             .all()
         )
 

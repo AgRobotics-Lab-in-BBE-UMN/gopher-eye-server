@@ -14,6 +14,7 @@ class User(db.Model):
     first_name = db.Column(db.String)
     last_name = db.Column(db.String)
     user_name = db.Column(db.String)
+    email = db.Column(db.String)
     join_date = db.Column(db.Date, default=datetime.now(timezone.utc).date)
     last_login = db.Column(db.Date, default=datetime.now(timezone.utc).date)
     
@@ -27,6 +28,7 @@ class User(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'user_name': self.user_name,
+            'email': self.email,
             'join_date': self.join_date,
             'last_login': self.last_login
         }
