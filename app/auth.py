@@ -1,6 +1,5 @@
 from functools import wraps
 from flask import request, jsonify
-from flask import Flask
 from firebase_admin import auth
 
 def login_required(f):
