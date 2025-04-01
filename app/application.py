@@ -61,65 +61,6 @@ class Application(ApplicationInterface):
             id2label=id2label,
         )
 
-    def segment_plant(self, file, task="leaf"):
-        guid = str(uuid.uuid4())
-        # TODO: Check if the image is valid
-
-        try:
-            with open(os.path.join(self.image_folder, f"{guid}.jpeg"), "wb") as fs:
-                fs.write(file)
-        except:
-            return None
-
-        if task == "leaf":
-            results = self.segmentation(
-                os.path.join(self.image_folder, f"{guid}.jpeg")
-            )[0]
-        elif task == "spike":
-            results = self.segmentation_spike(
-                os.path.join(self.image_folder, f"{guid}.jpeg")
-            )[0]
-
-        self._plants[guid] = {
-            "plant_id": guid,
-            "status": "complete",
-            "image": f"{guid}.jpeg",
-            "bounding_boxes": [],
-            "masks": [],
-            "labels": [],
-        }
-
-        if results.boxes:
-            self._plants[guid]["bounding_boxes"] = results.boxes.xyxyn.tolist()
-
-        if results.masks:
-            self._plants[guid]["masks"] = [mask.tolist() for mask in results.masks.xyn]
-
-        for i, mask_points in enumerate(self._plants[guid]["masks"]):
-            image = self.read_image(os.path.join(self.image_folder, f"{guid}.jpeg"))
-
-            mask = self._points_to_mask(mask_points, image.shape)
-            subimage = self._crop_image(image, mask)
-            cropped_mask = self._crop_image(mask, mask)
-
-            if task == "leaf":
-                label = self.classification.classify(cropped_mask * subimage)
-            elif task == "spike":
-                label = self._score_spike(subimage, cropped_mask)
-            else:
-                label = "Unknown"
-
-            self._plants[guid]["labels"].append(label)
-
-        self.record_plant(self._plants[guid])
-
-        return guid
-
-    def read_image(self, path):
-        img = cv2.imread(path, cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return img
-
     def _score_spike(self, image, mask, alpha=0.81):
         masked_image = image * mask
 
@@ -178,18 +119,6 @@ class Application(ApplicationInterface):
 
         return response
 
-    def get_image(self, plant_id, image_name):
-        # TODO: This needs a custom error message
-        try:
-            image_file_path = os.path.join(
-                self.image_folder, self._plants[plant_id][image_name].rstrip()
-            )
-            return open(image_file_path, "rb"), (
-                "image/png" if ("png" in image_file_path) else "image/jpeg"
-            )
-        except:
-            return None, None
-
     def get_plant_ids(self):
         return list(self._plants.keys())
 
@@ -203,18 +132,6 @@ class Application(ApplicationInterface):
     class UserAlreadyExistsException(Exception):
         def __init__(self, user_id):
             super().__init__(f"User already registered with id {user_id}")
-
-    def get_records_id(self, user_id):
-        # Logic to fetch record IDs for a user
-        return [
-            record["id"]
-            for record in self._plants.values()
-            if record.get("user_id") == user_id
-        ]
-
-    def get_record(self, record_id):
-        # Logic to fetch a specific record
-        return self._plants.get(record_id, None)
 
     def get_samples(self, record_id):
         # Logic to fetch samples for a record
