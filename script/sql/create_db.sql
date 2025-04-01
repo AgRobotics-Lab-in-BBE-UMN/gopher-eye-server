@@ -11,7 +11,7 @@ CREATE TABLE "user" (
 CREATE TABLE "site" (
   "id" varchar PRIMARY KEY,
   "permission" varchar,
-  "creation_date" date,
+  "created_date" date,
   "gps_longitude" int,
   "gps_latitude" int,
   "description" varchar
@@ -21,7 +21,7 @@ CREATE TABLE "record" (
   "id" varchar PRIMARY KEY,
   "site_id" varchar,
   "created_by" varchar,
-  "creation_date" date
+  "created_date" date
 );
 
 CREATE TABLE "sample" (
@@ -46,13 +46,17 @@ CREATE TABLE "membership" (
 );
 
 CREATE TABLE "mask" (
-  "image_id" varchar,
-  "mask" varchar
+  "sample_id" varchar,
+  "mask" varchar,
+  "confidence" int,
+  "label" varchar
 );
 
 CREATE TABLE "bounding_box" (
-  "image_id" varchar,
-  "box" varchar
+  "sample_id" varchar,
+  "box" varchar,
+  "confidence" int,
+  "label" varchar
 );
 
 CREATE TABLE "ownership" (
@@ -74,9 +78,9 @@ ALTER TABLE "membership" ADD FOREIGN KEY ("user_id") REFERENCES "user" ("id");
 
 ALTER TABLE "membership" ADD FOREIGN KEY ("group_id") REFERENCES "group" ("id");
 
-ALTER TABLE "mask" ADD FOREIGN KEY ("image_id") REFERENCES "sample" ("id");
+ALTER TABLE "mask" ADD FOREIGN KEY ("sample_id") REFERENCES "sample" ("id");
 
-ALTER TABLE "bounding_box" ADD FOREIGN KEY ("image_id") REFERENCES "sample" ("id");
+ALTER TABLE "bounding_box" ADD FOREIGN KEY ("sample_id") REFERENCES "sample" ("id");
 
 ALTER TABLE "ownership" ADD FOREIGN KEY ("group_id") REFERENCES "group" ("id");
 

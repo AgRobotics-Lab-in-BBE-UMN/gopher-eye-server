@@ -1,30 +1,21 @@
-from sqlalchemy import create_engine, String, Column, Date, Mode
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 from app.util import getPostgresURI
 import sqlalchemy as sa
 import sqlalchemy.orm as sa_orm
 from typing import Any
 
+SQLITE_DATABASE_URL = getPostgresURI()
 
-class SQLAlchemy:
-    SQLALCHEMY_DATABASE_URL = getPostgresURI()
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base = declarative_base()
+engine = create_engine(SQLITE_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    def get_db(self):
-        db = self.SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+Base = declarative_base()
 
-    def __getattr__(self, name: str) -> Any:
-        for mod in (sa, sa_orm):
-            if hasattr(mod, name):
-                return getattr(mod, name)
 
-        raise AttributeError(name)
-    
-    
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

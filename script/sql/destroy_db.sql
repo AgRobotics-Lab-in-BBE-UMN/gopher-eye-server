@@ -5,8 +5,8 @@ ALTER TABLE "sample" DROP CONSTRAINT IF EXISTS "sample_record_id_fkey";
 ALTER TABLE "sample" DROP CONSTRAINT IF EXISTS "sample_created_by_fkey";
 ALTER TABLE "membership" DROP CONSTRAINT IF EXISTS "membership_user_id_fkey";
 ALTER TABLE "membership" DROP CONSTRAINT IF EXISTS "membership_group_id_fkey";
-ALTER TABLE "mask" DROP CONSTRAINT IF EXISTS "mask_image_id_fkey";
-ALTER TABLE "bounding_box" DROP CONSTRAINT IF EXISTS "bounding_box_image_id_fkey";
+ALTER TABLE "mask" DROP CONSTRAINT IF EXISTS "mask_sample_id_fkey";
+ALTER TABLE "bounding_box" DROP CONSTRAINT IF EXISTS "bounding_box_sample_id_fkey";
 ALTER TABLE "ownership" DROP CONSTRAINT IF EXISTS "ownership_group_id_fkey";
 ALTER TABLE "ownership" DROP CONSTRAINT IF EXISTS "ownership_record_id_fkey";
 

@@ -3,6 +3,8 @@ import ultralytics.engine
 from app.application import Application
 from shutil import rmtree
 import os
+from sqlalchemy.orm import Session
+from app.models import User
 
 
 @pytest.fixture
@@ -12,6 +14,21 @@ def cleanup():
     for item in to_delete:
         if os.path.exists(item):
             rmtree(item)
+
+
+@pytest.fixture
+def app():
+    return Application()
+
+
+@pytest.fixture
+def session():
+    return Session()
+
+
+@pytest.fixture
+def user():
+    return User(id="test_user")
 
 
 def test_app_init(cleanup):
@@ -205,3 +222,60 @@ def test_get_plant_ids_empty(cleanup):
 
     # Then
     assert plant_ids == []
+
+
+def test_get_records_id(app, session, user):
+    # Given
+    record_id = app.create_record(session, {"name": "Test Record"}, user)
+
+    # When
+    records = app.get_records_id(user.id)
+
+    # Then
+    assert record_id in records
+
+
+def test_get_record(app, session, user):
+    # Given
+    record_id = app.create_record(session, {"name": "Test Record"}, user)
+
+    # When
+    record = app.get_record(record_id)
+
+    # Then
+    assert record["id"] == record_id
+
+
+def test_get_samples(app, session, user):
+    # Given
+    record_id = app.create_record(session, {"name": "Test Record"}, user)
+    sample_id = app.create_sample(session, {"name": "Test Sample"}, {"id": record_id})
+
+    # When
+    samples = app.get_samples(record_id)
+
+    # Then
+    assert sample_id in [sample["id"] for sample in samples]
+
+
+def test_get_sample(app, session):
+    # Given
+    sample_id = app.create_sample(session, {"name": "Test Sample"}, {"id": "test_record"})
+
+    # When
+    sample = app.get_sample(sample_id)
+
+    # Then
+    assert sample["id"] == sample_id
+
+
+def test_segment_sample(app, session):
+    # Given
+    sample_id = app.create_sample(session, {"name": "Test Sample"}, {"id": "test_record"})
+
+    # When
+    segmented_id = app.segment_sample(sample_id)
+
+    # Then
+    assert segmented_id == sample_id
+    assert app.get_sample(sample_id)["segmented"]

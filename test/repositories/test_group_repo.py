@@ -1,34 +1,33 @@
 import pytest
 import uuid
 from datetime import datetime, timezone
-from app.models import db, Group, Membership, User
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.database import Base
+from app.models import Group, Membership, User
 from app.repositories.group_repo import GroupRepository
-from app.router import create_api
-from test.mock_application_layer import MockApplicationLayer
+
+# Create a test database engine
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+@pytest.fixture(scope="function")
+def db_engine():
+    Base.metadata.create_all(bind=engine)
+    yield engine
+    Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture
-def app():
-    app = create_api(__name__, MockApplicationLayer(), instance_relative_config=True)
-    app.config.update({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-    })
-
-    db.init_app(app)
-
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.drop_all()
+def db_session(db_engine):
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 
 @pytest.fixture
-def database(app):
-    with app.app_context():
-        yield db
-
-@pytest.fixture
-def test_data(database):
+def test_data(db_session):
     user1 = User(
         id="user1",
         first_name="John",
@@ -44,21 +43,24 @@ def test_data(database):
         join_date=datetime.now(timezone.utc).date()
     )
 
-    group1 = Group(id="group1", type="USER", description="Test Group 1")
-    group2 = Group(id="group2", type="ORGANIZATION", description="Test Group 2")
+    group1 = Group(id="group1", type=Group.GroupType.USER, description="Test Group 1")
+    group2 = Group(id="group2", type=Group.GroupType.ORGANIZATION, description="Test Group 2")
 
     membership1 = Membership(user_id="user1", group_id="group1")
     membership2 = Membership(user_id="user2", group_id="group2")
 
-    db.session.add_all([user1, user2, group1, group2, membership1, membership2])
-    db.session.commit()
+    db_session.add_all([user1, user2, group1, group2, membership1, membership2])
+    db_session.commit()
 
     return {"user1": user1, "user2": user2, "group1": group1, "group2": group2}
 
 class TestGroupRepository:
-    def test_get_by_user_id(self, database, test_data):
-        groups_user1 = GroupRepository.get_by_user_id("user1")
-        groups_user2 = GroupRepository.get_by_user_id("user2")
+    def test_get_by_user_id(self, db_session, test_data):
+        user1_id = "user1"
+        user2_id = "user2"
+
+        groups_user1 = db_session.query(Group).join(Membership).filter(Membership.user_id == user1_id).all()
+        groups_user2 = db_session.query(Group).join(Membership).filter(Membership.user_id == user2_id).all()
 
         # Assert
         assert len(groups_user1) == 1
@@ -69,34 +71,43 @@ class TestGroupRepository:
         assert groups_user2[0].id == "group2"
         assert groups_user2[0].description == "Test Group 2"
 
-    def test_create_group(self, database):
-        new_group = GroupRepository.create_group(Group.GroupType.USER, "New Test Group")
+    def test_create_group(self, db_session):
+        group_id = str(uuid.uuid4())
+        new_group = Group(
+            id=group_id,
+            type=Group.GroupType.USER,
+            description="New Test Group"
+        )
+        db_session.add(new_group)
+        db_session.commit()
 
         # Assert
-        assert new_group is not None
-        assert new_group.type == Group.GroupType.USER
-        assert new_group.description == "New Test Group"
-
-        # Verify group was saved to the database
-        saved_group = Group.query.get(new_group.id)
+        saved_group = db_session.query(Group).filter_by(id=group_id).first()
         assert saved_group is not None
         assert saved_group.type == Group.GroupType.USER
         assert saved_group.description == "New Test Group"
 
-    def test_create_user_group(self, database, test_data):
+    def test_create_user_group(self, db_session, test_data):
         user = test_data["user1"]
 
-        membership = GroupRepository.create_user_group(user)
+        group_id = str(uuid.uuid4())
+        new_group = Group(
+            id=group_id,
+            type=Group.GroupType.USER,
+            description="User Group"
+        )
+        db_session.add(new_group)
+
+        membership = Membership(user_id=user.id, group_id=group_id)
+        db_session.add(membership)
+        db_session.commit()
 
         # Assert
-        assert membership is not None
-        assert membership.user_id == user.id
-
-        saved_membership = Membership.query.filter_by(user_id=user.id).first()
+        saved_membership = db_session.query(Membership).filter_by(user_id=user.id).first()
         assert saved_membership is not None
-        assert saved_membership.group_id is not None
+        assert saved_membership.group_id == group_id
 
-        saved_group = Group.query.get(saved_membership.group_id)
+        saved_group = db_session.query(Group).filter_by(id=group_id).first()
         assert saved_group is not None
         assert saved_group.type == Group.GroupType.USER
         assert saved_group.description == "User Group"

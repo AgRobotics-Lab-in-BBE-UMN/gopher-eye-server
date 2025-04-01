@@ -1,36 +1,31 @@
-from flask_sqlalchemy import SQLAlchemy
 import pytest
-from app.router import create_api
-from app.application import Application
-from app.models import db, User, Group, Site, Record, Sample, Membership, Ownership, Mask, BoundingBox
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from app.models import User, Group, Site, Record, Sample, Membership, Ownership, Mask, BoundingBox
 import uuid
-from test.mock_application_layer import MockApplicationLayer
+from app.database import Base
+
+# Create a test database engine
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+@pytest.fixture(scope="function")
+def db_engine():
+    Base.metadata.create_all(bind=engine)
+    yield engine
+    Base.metadata.drop_all(bind=engine)
 
 @pytest.fixture
-def app():
-    app = create_api(__name__, MockApplicationLayer(), instance_relative_config=True)
-    app.config.update({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-    })
-    db.init_app(app)
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.drop_all()
+def db_session(db_engine):
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 
 @pytest.fixture
-def database(app):
-    with app.app_context():
-        yield db
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
-
-@pytest.fixture
-def test_data(database):
+def test_data(db_session):
     # Create test users
     user1 = User(id="user1", first_name="John", last_name="Doe", user_name="johndoe")
     user2 = User(id="user2", first_name="Jane", last_name="Smith", user_name="janesmith")
@@ -63,89 +58,56 @@ def test_data(database):
     bbox1 = BoundingBox(image_id="sample1", box="[10, 20, 100, 200]")
     
     # Add to database
-    db.session.add_all([user1, user2, group1, group2, membership1, membership2,
+    db_session.add_all([user1, user2, group1, group2, membership1, membership2,
                         site1, record1, ownership1, sample1, mask1, bbox1])
-    db.session.commit()
+    db_session.commit()
 
-def test_create_user(database):
-    
+def test_create_user(db_session):
     user_id = str(uuid.uuid4())
     user = User(id=user_id, first_name="Test", last_name="User", user_name="testuser")
+    db_session.add(user)
+    db_session.commit()
     
-    database.session.add(user)
-    database.session.commit()
-    
-    saved_user = User.query.get(user_id)
+    saved_user = db_session.query(User).filter_by(id=user_id).first()
     assert saved_user is not None
     assert saved_user.first_name == "Test"
     assert saved_user.last_name == "User"
-    
-def test_user_serialize(database, test_data):
-    
-    user = User.query.get("user1")
+
+def test_user_serialize(db_session, test_data):
+    user = db_session.query(User).filter_by(id="user1").first()
     serialized = user.serialize()
-    
     assert serialized["id"] == "user1"
     assert serialized["first_name"] == "John"
     assert serialized["last_name"] == "Doe"
     assert serialized["user_name"] == "johndoe"
-    
-def test_membership(database, test_data):
-    
-    user = User.query.get("user1")
-    group = Group.query.get("group1")
-    
-    memebrship = Membership.query.filter_by(user_id="user1", group_id="group1").all()
-    
-    assert len(memebrship) == 1
 
-# def test_site_creation(database):
-#     
-#     group_id = str(uuid.uuid4())
-#     group = Group(id=group_id, type="site_admin", description="Site Admin Group")
-    
-#     site_id = str(uuid.uuid4())
-#     site = Site(id=site_id, permission=group_id, description="New Test Site", 
-#                gps_longitude=300, gps_latitude=400)
-    
-#     database.session.add_all([group, site])
-#     database.session.commit()
-    
-#     saved_site = Site.query.get(site_id)
-#     assert saved_site is not None
-#     assert saved_site.permission == group_id
-#     assert saved_site.permission_group.id == group_id
+def test_membership(db_session, test_data):
+    membership = db_session.query(Membership).filter_by(user_id="user1", group_id="group1").all()
+    assert len(membership) == 1
 
-def test_record_sample_relationship(database, test_data):
-    
-    record = Record.query.get("record1")
-    sample = Sample.query.get("sample1")
-    
+def test_record_sample_relationship(db_session, test_data):
+    record = db_session.query(Record).filter_by(id="record1").first()
+    sample = db_session.query(Sample).filter_by(id="sample1").first()
     assert sample in record.samples
     assert sample.record_id == "record1"
-    
-def test_sample_mask_bbox_relationship(database, test_data):
-    
-    sample = Sample.query.get("sample1")
-    
+
+def test_sample_mask_bbox_relationship(db_session, test_data):
+    sample = db_session.query(Sample).filter_by(id="sample1").first()
     assert len(sample.masks) == 1
     assert len(sample.bounding_boxes) == 1
     assert sample.masks[0].mask == "mask_data_base64"
     assert sample.bounding_boxes[0].box == "[10, 20, 100, 200]"
 
-def test_record_serialize(database, test_data):
-    
-    record = Record.query.get("record1")
+def test_record_serialize(db_session, test_data):
+    record = db_session.query(Record).filter_by(id="record1").first()
     serialized = record.serialize()
-    
     assert serialized["id"] == "record1"
     assert serialized["site_id"] == "site1"
-    assert "creation_date" in serialized
+    assert "created_data" in serialized
 
-def test_sample_creator_relationship(database, test_data):
-    
-    sample = Sample.query.get("sample1")
-    user = User.query.get("user1")
-    
+def test_sample_creator_relationship(db_session, test_data):
+    sample = db_session.query(Sample).filter_by(id="sample1").first()
+    user = db_session.query(User).filter_by(id="user1").first()
     assert sample.creator == user
     assert sample in user.samples
+

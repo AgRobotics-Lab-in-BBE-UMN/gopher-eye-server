@@ -1,11 +1,17 @@
-from fastapi import APIRouter, HTTPException, Request, UploadFile, Form, Depends
+import uuid
+from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, Form, Depends
 from fastapi.responses import JSONResponse, FileResponse
 from typing import Optional
+
+from pytest import Session
 from app.config import get_firebase_user_from_token
 from typing import Annotated
+from app.database import get_db
 from app.repositories.user_repo import UserRepository
 from app.models import User
 from datetime import datetime, timezone
+from sqlalchemy.orm import Session
+from app.application_interface import ApplicationInterface
 
 
 class Router(APIRouter):
@@ -14,142 +20,128 @@ class Router(APIRouter):
         self.application_layer = application_layer
 
 
-def create_api(name, application_layer=None, **kwargs):
+def create_api(name, application_layer:ApplicationInterface=None, **kwargs):
     router = Router(application_layer=application_layer, **kwargs)
 
     @router.post("/register")
-    async def register(user: Annotated[dict, Depends(get_firebase_user_from_token)]):
-        user_id = user["user_id"]
+    async def register(user: Annotated[dict, Depends(get_firebase_user_from_token)], db: Session = Depends(get_db)):
         try:
-            # UserRepository.get_by_id(user_id)
-            return JSONResponse({"status": "User already exists"})
-        except:
-            # new_user = User(
-            #     id=user_id,
-            #     email=user["email"],
-            #     join_date=datetime.now(timezone.utc).date(),
-            #     last_login=datetime.now(timezone.utc).date(),
-            # )
-            # UserRepository.create(new_user)
+            user_id = user["user_id"]
+            email = user["email"]
+            user = User(id=user_id, email=email)
+            
+            application_layer.register_user(db, user)
             return JSONResponse({"status": "User registered successfully"})
-        return JSONResponse({"status": "ok"})
+        except application_layer.UserAlreadyExistsException:
+            return JSONResponse({"status": "User already exists"})
+        except Exception as e:
+            print("Failed to register user: ", e)
+            return HTTPException(status_code=500, detail="Failed to register user")
+        
+    @router.get("/records")
+    async def get_records(user: Annotated[dict, Depends(get_firebase_user_from_token)],  db: Session = Depends(get_db)):
+        try:
+            user_id = user["user_id"]
+            records = application_layer.get_user_records(db, user_id)
+            return JSONResponse({"records": [record.id for record in records]})
+        except Exception as e:
+            print("Failed to fetch records: ", e)
+            raise HTTPException(status_code=500, detail="Failed to fetch records")
+        
+    @router.put("/records/create")
+    async def create_record(request: Request, user: Annotated[dict, Depends(get_firebase_user_from_token)], db: Session = Depends(get_db)):
+        try:
+            user_id = user["user_id"]
+            try:
+                body = await request.json()
+            except:
+                body = await request.form()
+            site = body.get("site_id")
+            
+            record_id = application_layer.create_record(db, user_id, site)
+            return JSONResponse({"status": f"Record created successfully", "record_id": record_id})
+        except Exception as e:
+            print("Failed to create record: ", e)
+            raise HTTPException(status_code=500, detail="Failed to create record")
+        
+    @router.put("/records/{record_id}/samples/create")
+    async def create_sample(request: Request, record_id: str, user: Annotated[dict, Depends(get_firebase_user_from_token)], db: Session = Depends(get_db)):
+        try:
+            user_id = user["user_id"]
+            
+            try:
+                body = await request.json()
+            except:
+                body = await request.form()
+                
+            image_file = body.get("image")
+            sample_type = body.get("sample_type")
+            sample_id = application_layer.create_sample(db, user_id, record_id, image_file, sample_type)
+            return JSONResponse({"status": f"Sample created successfully", "sample_id": sample_id})
+        except Exception as e:
+            print("Failed to create sample: ", e)
+            raise HTTPException(status_code=500, detail="Failed to create sample")
+        
+    @router.get("/records/{record_id}/samples")
+    async def get_samples(record_id: str, user: Annotated[dict, Depends(get_firebase_user_from_token)], db: Session = Depends(get_db)):
+        try:
+            user_id = user["user_id"]
+            samples = application_layer.get_samples(db, user_id, record_id)
+            response = {"samples": []}
+            for sample in samples:
+                sample_data = {
+                    "id": sample.id,
+                    "record_id": sample.record_id,
+                    "created_date": str(sample.created_date),
+                    "created_by": sample.created_by,
+                    "image_url": sample.image_url,
+                    "type": sample.type,
+                    "processing_status": sample.processing_status
+                }
+                response["samples"].append(sample_data)
+            return JSONResponse(response)
+        except Exception as e:
+            print("Failed to fetch samples: ", e)
+            raise HTTPException(status_code=500, detail="Failed to fetch samples")
 
-    # @app.put("/dl/segmentation")
-    # async def segment_plant(image: UploadFile):
-    #     if image.content_type != "multipart/form-data":
-    #         raise HTTPException(status_code=400, detail="Invalid content type")
-    #     return JSONResponse(
-    #         {
-    #             "plant_id": application_layer.segment_plant(
-    #                 await image.read()
-    #             )
-    #         }
-    #     )
+    @router.post("/segment/{sample_id}")
+    async def segment_sample(sample_id: str, user: Annotated[dict, Depends(get_firebase_user_from_token)], db: Session = Depends(get_db)):
+        try:
+            user_id = user["user_id"]
+            application_layer.segment_sample(db, sample_id)
+            return JSONResponse({"status": "Sample segmentation started"})
+        except Exception as e:
+            print("Failed to segment sample: ", e)
+            raise HTTPException(status_code=500, detail="Failed to segment sample")
 
-    # @app.put("/dl/segmentation_spike")
-    # async def segment_spike(image: UploadFile):
-    #     if image.content_type != "multipart/form-data":
-    #         raise HTTPException(status_code=400, detail="Invalid content type")
-    #     return JSONResponse(
-    #         {
-    #             "plant_id": application_layer.segment_plant(
-    #                 await image.read(),
-    #                 task="spike"
-    #             )
-    #         }
-    #     )
-
-    # @app.put("/perf/segmentation")
-    # async def perf_test_segmentation(image: UploadFile):
-    #     if image.content_type != "multipart/form-data":
-    #         raise HTTPException(status_code=400, detail="Invalid content type")
-    #     plant_id = application_layer.segment_plant(await image.read())
-    #     image_data, mimetype = application_layer.get_image(plant_id, "segmentation")
-    #     return FileResponse(image_data, media_type=mimetype)
-
-    # @app.get("/plant/status")
-    # async def get_plant_status(plant_id: str):
-    #     return JSONResponse({"status": application_layer.plant_status(plant_id)})
-
-    # @app.get("/plant/data")
-    # async def get_plant_data(plant_id: str):
-    #     return JSONResponse(application_layer.plant_data(plant_id))
-
-    # @app.get("/plant/image")
-    # async def get_plant_item(plant_id: str, image_name: str):
-    #     image_data, mimetype = application_layer.get_image(plant_id, image_name)
-    #     if image_data:
-    #         return FileResponse(image_data, media_type=mimetype)
-    #     else:
-    #         raise HTTPException(status_code=400, detail="Invalid request")
-
-    # @app.get("/plant/ids")
-    # async def get_plant_ids():
-    #     return JSONResponse({"plant_ids": application_layer.get_plant_ids()})
-
-    # @app.post("/otpVerification")
-    # async def verify_otp(status: Optional[str] = Form(...)):
-    #     if status == "200":
-    #         return JSONResponse(
-    #             {
-    #                 "status": 200,
-    #                 "message": "OTP verified successfully",
-    #                 "token": "test_token",
-    #             }
-    #         )
-    #     elif status == "201":
-    #         return JSONResponse(
-    #             {
-    #                 "status": 201,
-    #                 "message": "OTP verified successfully",
-    #                 "token": "test_token",
-    #             }
-    #         )
-    #     elif status == "401":
-    #         raise HTTPException(status_code=401, detail="OTP is not valid")
-    #     else:
-    #         return JSONResponse(
-    #             {
-    #                 "status": 200,
-    #                 "message": "OTP verified successfully",
-    #                 "token": "test_token",
-    #             }
-    #         )
-
-    # @app.post("/signin")
-    # async def signin(status: Optional[str] = Form(...)):
-    #     if status == "200":
-    #         return JSONResponse(
-    #             {
-    #                 "status": 200,
-    #                 "message": "login successfully",
-    #                 "token": "test_token",
-    #             }
-    #         )
-    #     elif status == "201":
-    #         return JSONResponse(
-    #             {
-    #                 "status": 201,
-    #                 "message": "login successfully",
-    #                 "token": "test_token",
-    #             }
-    #         )
-    #     elif status == "401":
-    #         raise HTTPException(
-    #             status_code=401,
-    #             detail="email or password is wrong/something went wrong",
-    #         )
-    #     else:
-    #         return JSONResponse(
-    #             {
-    #                 "status": 200,
-    #                 "message": "login successfully",
-    #                 "token": "test_token",
-    #             }
-    #         )
-
-    # @app.get("/status")
-    # async def get_status():
-    #     return JSONResponse({"status": "ok"})
-
+    @router.get("/records/{record_id}/samples/{sample_id}/masks")
+    async def get_masks(sample_id: str, user: Annotated[dict, Depends(get_firebase_user_from_token)], db: Session = Depends(get_db)):
+        try:
+            user_id = user["user_id"]
+            masks = application_layer.get_masks(db, sample_id)
+            result = {"masks": [
+                {
+                    "id": mask.id,
+                    "sample_id": mask.sample_id,
+                    "mask_url": mask.mask_url,
+                    "type": mask.type,
+                    "created_date": str(mask.created_date),
+                    "created_by": mask.created_by
+                } for mask in masks
+            ]}
+            return JSONResponse({"masks": masks})
+        except Exception as e:
+            print("Failed to fetch masks: ", e)
+            raise HTTPException(status_code=500, detail="Failed to fetch masks")
+        
+    @router.get("/records/{record_id}/samples/{sample_id}/boxes")
+    async def get_boxes(mask_id: str, user: Annotated[dict, Depends(get_firebase_user_from_token)], db: Session = Depends(get_db)):
+        try:
+            user_id = user["user_id"]
+            boxes = application_layer.get_boxes(db, user_id, mask_id)
+            return JSONResponse({"boxes": boxes})
+        except Exception as e:
+            print("Failed to fetch boxes: ", e)
+            raise HTTPException(status_code=500, detail="Failed to fetch boxes")
+    
     return router
