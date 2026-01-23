@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, send_file, abort
+import json
 
 
 def create_api(name, application_layer=None):
@@ -12,10 +13,15 @@ def create_api(name, application_layer=None):
         elif "image" not in request.files:
             abort(400)
         else:
+            data = {}
+            if "data" in request.form:
+                data = json.loads(request.form["data"])
+
             return jsonify(
                 {
                     "plant_id": application_layer.segment_plant(
-                        request.files["image"].read()
+                        request.files["image"].read(),
+                        data=data
                     )
                 }
             )
@@ -28,14 +34,34 @@ def create_api(name, application_layer=None):
         elif "image" not in request.files:
             abort(400)
         else:
+            data = {}
+            if "data" in request.form:
+                data = json.loads(request.form["data"])
+
             return jsonify(
                 {
                     "plant_id": application_layer.segment_plant(
                         request.files["image"].read(),
-                        task="spike"
+                        task="spike",
+                        data=data
                     )
                 }
             )
+
+    @server.route("/trial", methods=["GET"])
+    def get_trial():
+        trial_id = request.args.get("trial_id")
+        return jsonify(application_layer.get_trial(trial_id))
+
+    @server.route("/trial", methods=["POST"])
+    def create_trial():
+        if request.mimetype != "application/json":
+            print(f"{request.content_type} is not 'application/json'")
+            abort(400)
+        else:
+            trial_data = request.get_json()
+            trial_id = application_layer.create_trial(trial_data)
+            return jsonify({"trial_id": trial_id})
 
     @server.route("/perf/segmentation", methods=["PUT"])
     def perf_test_segementation():

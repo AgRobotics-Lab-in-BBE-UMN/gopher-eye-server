@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 class ApplicationInterface(ABC):
     @abstractmethod
-    def segment_plant(self, image):
+    def segment_plant(self, image, task='leaf', data=None):
         pass
 
     @abstractmethod
@@ -19,4 +19,12 @@ class ApplicationInterface(ABC):
 
     @abstractmethod
     def get_plant_ids(self):
+        pass
+
+    @abstractmethod
+    def get_trial(self, trial_id):
+        pass
+
+    @abstractmethod
+    def create_trial(self, trial_data):
         pass

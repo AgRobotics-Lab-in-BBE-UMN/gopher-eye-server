@@ -12,8 +12,14 @@ from scipy import ndimage
 LEAF_MODEL = "models/leaf-yolo11m-seg.pt"
 SPIKE_MODEL = "models/spike-yolo11x-seg.pt"
 
+DEPLOYED = True
+
 class Application(ApplicationInterface):
-    def __init__(self, image_folder="images", plants="plants"):
+    def __init__(self,
+                 image_folder="/mnt/s3-gopher-eye/images" if DEPLOYED else "images",
+                 plants="/mnt/s3-gopher-eye/plants" if DEPLOYED else "plants",
+                 trials="/mnt/s3-gopher-eye/trials" if DEPLOYED else "trials"):
+        
         self.image_folder = image_folder
         os.makedirs(self.image_folder, exist_ok=True)
 
@@ -32,11 +38,39 @@ class Application(ApplicationInterface):
                         "image": data["image"],
                         "bounding_boxes": data["bounding_boxes"],
                         "masks": data["masks"],
-                        "labels": data["labels"]
+                        "labels": data["labels"],
+                        "trial": data["trial"] if "trial" in data else "",
+                        "datetime": data["datetime"] if "datetime" in data else "",
+                        "plot_label_name": data["plot_label_name"] if "plot_label_name" in data else "",
+                        "plot_id": data["plot_id"] if "plot_id" in data else "",
+                        "plot_location": data["plot_location"] if "plot_location" in data else "",
+                        "user": data["user"] if "user" in data else ""
                     }
                     line = fs.readline()
         else:
             with open(self.plants_file, 'w') as fs:
+                pass
+
+        self.trials_folder = trials
+        os.makedirs(self.trials_folder, exist_ok=True)
+        self._trials = {}
+
+        self.trials_file = os.path.join(self.trials_folder, "trials.json")
+        if os.path.exists(self.trials_file):
+            with open(self.trials_file, 'r') as fs:
+                line = fs.readline()
+                while line:
+                    data = json.loads(line)
+                    self._trials[data["trial_id"]] = {
+                        "trial_id": data["trial_id"],
+                        "trial_name": data["trial_name"],
+                        "datetime": data["datetime"] if "datetime" in data else "",
+                        "description": data["description"] if "description" in data else "",
+                        "user": data["user"] if "user" in data else ""
+                    }
+                    line = fs.readline()
+        else:
+            with open(self.trials_file, 'w') as fs:
                 pass
 
         self.segmentation = YOLO(LEAF_MODEL)
@@ -45,7 +79,7 @@ class Application(ApplicationInterface):
         id2label = {0: 'Healthy-Leaf', 1: 'Downy-Leaf', 2: 'Powdery-Leaf'}
         self.classification = Classification("models/swinv2-tiny-patch4-window8-256", label2id=label2id, id2label=id2label)
 
-    def segment_plant(self, file, task='leaf'):
+    def segment_plant(self, file, task='leaf', data=None):
         guid = str(uuid.uuid4())
         # TODO: Check if the image is valid
 
@@ -66,7 +100,13 @@ class Application(ApplicationInterface):
             "image": f"{guid}.jpeg",
             "bounding_boxes": [],
             "masks": [],
-            "labels": []
+            "labels": [],
+            "trial": data.get("trial", "") if data else "",
+            "datetime": data.get("datetime", "") if data else "",
+            "plot_label_name": data.get("plot_label_name", "") if data else "",
+            "plot_id": data.get("plot_id", "") if data else "",
+            "plot_location": data.get("plot_location", "") if data else "",
+            "user": data.get("user", "") if data else ""
         }
 
         if results.boxes:
@@ -169,3 +209,19 @@ class Application(ApplicationInterface):
         
     def get_plant_ids(self):
         return list(self._plants.keys())
+
+    def get_trial(self, trial_id):
+        if trial_id in self._trials:
+            return self._trials[trial_id]
+        return None
+
+    def create_trial(self, trial_data):
+        trial_id = str(uuid.uuid4())
+        trial_data["trial_id"] = trial_id
+        
+        self._trials[trial_id] = trial_data
+
+        with open(self.trials_file, 'a') as fs:
+            fs.write(json.dumps(trial_data) + "\n")
+            
+        return trial_id
