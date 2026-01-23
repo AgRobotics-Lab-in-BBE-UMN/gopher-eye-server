@@ -1,5 +1,6 @@
 import os
 import uuid
+import threading
 from application_interface import ApplicationInterface
 from ultralytics import YOLO
 from classification import Classification
@@ -87,14 +88,9 @@ class Application(ApplicationInterface):
         except:
             return None
 
-        if task == 'leaf':
-            results = self.segmentation(os.path.join(self.image_folder, f'{guid}.jpeg'))[0]
-        elif task == 'spike':
-            results = self.segmentation_spike(os.path.join(self.image_folder, f'{guid}.jpeg'))[0]
-
         self._plants[guid] = {
             "plant_id": guid,
-            "status": "complete",
+            "status": "pending",
             "image": f"{guid}.jpeg",
             "bounding_boxes": [],
             "masks": [],
@@ -106,6 +102,18 @@ class Application(ApplicationInterface):
             "plot_location": data.get("plot_location", "") if data else "",
             "user": data.get("user", "") if data else ""
         }
+
+        # Start segmentation in a separate thread
+        thread = threading.Thread(target=self._process_segmentation, args=(guid, task))
+        thread.start()
+
+        return guid
+
+    def _process_segmentation(self, guid, task):
+        if task == 'leaf':
+            results = self.segmentation(os.path.join(self.image_folder, f'{guid}.jpeg'))[0]
+        elif task == 'spike':
+            results = self.segmentation_spike(os.path.join(self.image_folder, f'{guid}.jpeg'))[0]
 
         if results.boxes:
             self._plants[guid]["bounding_boxes"] = results.boxes.xyxyn.tolist()
@@ -128,10 +136,9 @@ class Application(ApplicationInterface):
                 label = "Unknown"
                 
             self._plants[guid]["labels"].append(label)
-            
-        self.record_plant(self._plants[guid])
 
-        return guid
+        self._plants[guid]["status"] = "complete"
+        self.record_plant(self._plants[guid])
     
     def read_image(self, path):
         img = cv2.imread(path, cv2.IMREAD_COLOR)
