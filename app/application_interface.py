@@ -22,7 +22,7 @@ class ApplicationInterface(ABC):
         pass
 
     @abstractmethod
-    def get_trial(self, trial_id):
+    def get_trials(self):
         pass
 
     @abstractmethod
