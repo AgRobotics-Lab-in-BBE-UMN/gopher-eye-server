@@ -48,10 +48,9 @@ def create_api(name, application_layer=None):
                 }
             )
 
-    @server.route("/trial", methods=["GET"])
+    @server.route("/trials", methods=["GET"])
     def get_trial():
-        trial_id = request.args.get("trial_id")
-        return jsonify(application_layer.get_trial(trial_id))
+        return jsonify(application_layer.get_trials())
 
     @server.route("/trial", methods=["POST"])
     def create_trial():

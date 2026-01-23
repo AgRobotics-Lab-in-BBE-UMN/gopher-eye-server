@@ -208,10 +208,8 @@ class Application(ApplicationInterface):
     def get_plant_ids(self):
         return list(self._plants.keys())
 
-    def get_trial(self, trial_id):
-        if trial_id in self._trials:
-            return self._trials[trial_id]
-        return None
+    def get_trials(self):
+        return self._trials
 
     def create_trial(self, trial_data):
         trial_id = str(uuid.uuid4())
