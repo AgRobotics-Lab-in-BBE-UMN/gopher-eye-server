@@ -12,13 +12,11 @@ from scipy import ndimage
 LEAF_MODEL = "models/leaf-yolo11m-seg.pt"
 SPIKE_MODEL = "models/spike-yolo11x-seg.pt"
 
-DEPLOYED = True
-
 class Application(ApplicationInterface):
     def __init__(self,
-                 image_folder="/mnt/s3-gopher-eye/images" if DEPLOYED else "images",
-                 plants="/mnt/s3-gopher-eye/plants" if DEPLOYED else "plants",
-                 trials="/mnt/s3-gopher-eye/trials" if DEPLOYED else "trials"):
+                 image_folder="images",
+                 plants="plants",
+                 trials="trials"):
         
         self.image_folder = image_folder
         os.makedirs(self.image_folder, exist_ok=True)
